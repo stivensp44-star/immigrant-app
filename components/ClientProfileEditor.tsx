@@ -109,16 +109,34 @@ export function ClientProfileEditor({
         }}
       >
         <div>
-          <Link
-            href="/"
+          <div
             style={{
-              color: '#0f172a',
-              textDecoration: 'none',
-              fontSize: '0.95rem',
+              display: 'flex',
+              gap: 16,
+              flexWrap: 'wrap',
             }}
           >
-            Back to intake
-          </Link>
+            <Link
+              href="/"
+              style={{
+                color: '#0f172a',
+                textDecoration: 'none',
+                fontSize: '0.95rem',
+              }}
+            >
+              Back to intake
+            </Link>
+            <Link
+              href={`/clients/${applicantId}/flows/tps`}
+              style={{
+                color: '#0f172a',
+                textDecoration: 'none',
+                fontSize: '0.95rem',
+              }}
+            >
+              Open TPS flow
+            </Link>
+          </div>
         </div>
 
         <section

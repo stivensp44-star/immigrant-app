@@ -11,19 +11,42 @@ import {
 import { QuestionRenderer } from './QuestionRenderer'
 
 type InterviewFlowProps = {
+  backHref?: string
+  backLabel?: string
+  initialAnswers?: InterviewAnswers
+  onSaveAnswers?: (answers: InterviewAnswers) => Promise<void>
+  subtitle?: string
   questions: Question[]
   title: string
 }
 
-export function InterviewFlow({ questions, title }: InterviewFlowProps) {
-  const [answers, setAnswers] = useState<InterviewAnswers>({})
+export function InterviewFlow({
+  backHref = '/',
+  backLabel = 'Back to intake',
+  initialAnswers = {},
+  onSaveAnswers,
+  questions,
+  subtitle,
+  title,
+}: InterviewFlowProps) {
+  const [answers, setAnswers] = useState<InterviewAnswers>(initialAnswers)
   const [currentIndex, setCurrentIndex] = useState(0)
   const [showSummary, setShowSummary] = useState(false)
+  const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved' | 'error'>(
+    'idle'
+  )
+  const [saveError, setSaveError] = useState('')
 
   const visibleQuestions = useMemo(
     () => getVisibleQuestions(questions, answers),
     [answers, questions]
   )
+
+  useEffect(() => {
+    setAnswers(initialAnswers)
+    setShowSummary(false)
+    setCurrentIndex(getFirstIncompleteQuestionIndex(questions, initialAnswers))
+  }, [initialAnswers, questions])
 
   useEffect(() => {
     if (visibleQuestions.length === 0) {
@@ -53,20 +76,34 @@ export function InterviewFlow({ questions, title }: InterviewFlowProps) {
     if (showSummary) {
       setShowSummary(false)
     }
+
+    if (saveState === 'saved') {
+      setSaveState('idle')
+    }
+
+    if (saveError) {
+      setSaveError('')
+    }
   }
 
-  function handleBack() {
+  async function handleBack() {
     if (showSummary) {
       setShowSummary(false)
       setCurrentIndex(Math.max(visibleQuestions.length - 1, 0))
       return
     }
 
+    await persistAnswers(answers)
     setCurrentIndex((index) => Math.max(index - 1, 0))
   }
 
-  function handleNext() {
+  async function handleNext() {
     if (!currentQuestion) {
+      return
+    }
+
+    const didPersist = await persistAnswers(answers)
+    if (!didPersist) {
       return
     }
 
@@ -96,14 +133,14 @@ export function InterviewFlow({ questions, title }: InterviewFlowProps) {
       >
         <div>
           <Link
-            href="/"
+            href={backHref}
             style={{
               color: '#0f172a',
               textDecoration: 'none',
               fontSize: '0.95rem',
             }}
           >
-            Back to intake
+            {backLabel}
           </Link>
         </div>
 
@@ -129,8 +166,8 @@ export function InterviewFlow({ questions, title }: InterviewFlowProps) {
               {title}
             </h1>
             <p style={{ margin: 0, color: '#475569' }}>
-              Answer one question at a time. Conditional questions appear only
-              when they apply.
+              {subtitle ||
+                'Answer one question at a time. Conditional questions appear only when they apply.'}
             </p>
           </div>
 
@@ -196,7 +233,7 @@ export function InterviewFlow({ questions, title }: InterviewFlowProps) {
             {!showSummary && currentQuestion ? (
               <button
                 type="button"
-                onClick={handleNext}
+                onClick={() => void handleNext()}
                 disabled={isCurrentQuestionBlocked(currentQuestion, currentAnswer)}
                 style={{
                   ...navigationButtonStyles,
@@ -216,10 +253,45 @@ export function InterviewFlow({ questions, title }: InterviewFlowProps) {
               </button>
             ) : null}
           </div>
+
+          {saveState === 'saving' ? (
+            <p style={{ margin: 0, color: '#475569' }}>Saving progress...</p>
+          ) : null}
+
+          {saveState === 'saved' ? (
+            <p style={{ margin: 0, color: '#166534' }}>Progress saved.</p>
+          ) : null}
+
+          {saveState === 'error' ? (
+            <p style={{ margin: 0, color: '#b91c1c' }}>
+              {saveError || 'Unable to save progress.'}
+            </p>
+          ) : null}
         </section>
       </div>
     </main>
   )
+
+  async function persistAnswers(nextAnswers: InterviewAnswers): Promise<boolean> {
+    if (!onSaveAnswers) {
+      return true
+    }
+
+    setSaveState('saving')
+    setSaveError('')
+
+    try {
+      await onSaveAnswers(nextAnswers)
+      setSaveState('saved')
+      return true
+    } catch (error) {
+      setSaveState('error')
+      setSaveError(
+        error instanceof Error ? error.message : 'Unable to save progress.'
+      )
+      return false
+    }
+  }
 }
 
 function SummaryScreen({
@@ -296,3 +368,20 @@ const navigationButtonStyles = {
   padding: '12px 16px',
   fontSize: '1rem',
 } as const
+
+function getFirstIncompleteQuestionIndex(
+  questions: Question[],
+  answers: InterviewAnswers
+): number {
+  const visibleQuestions = getVisibleQuestions(questions, answers)
+  const firstIncompleteIndex = visibleQuestions.findIndex((question) => {
+    if (!question.required) {
+      return false
+    }
+
+    const answer = answers[question.id] ?? ''
+    return answer.trim() === ''
+  })
+
+  return firstIncompleteIndex === -1 ? 0 : firstIncompleteIndex
+}

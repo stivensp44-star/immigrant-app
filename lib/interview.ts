@@ -20,6 +20,7 @@ export type Question = {
 }
 
 export type InterviewAnswers = Record<string, string>
+export type FlowAnswersMap = Record<string, InterviewAnswers>
 
 export function isQuestionVisible(
   question: Question,

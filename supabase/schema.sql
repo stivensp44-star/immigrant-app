@@ -16,6 +16,7 @@ create table if not exists public.applicants (
   i94_number text,
   current_status text,
   flow_type text not null,
+  flow_answers jsonb not null default '{}'::jsonb,
   constraint applicants_flow_type_check
     check (flow_type in ('TPS', 'TPS_EAD', 'ASYLUM_EAD')),
   constraint applicants_email_not_blank

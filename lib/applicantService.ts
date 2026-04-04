@@ -1,4 +1,5 @@
 import { supabase } from './supabaseClient'
+import { FlowAnswersMap, InterviewAnswers } from './interview'
 
 export type FlowType = 'TPS' | 'TPS_EAD' | 'ASYLUM_EAD'
 
@@ -20,6 +21,7 @@ export type Applicant = {
   i94_number: string | null
   current_status: string | null
   flow_type: FlowType
+  flow_answers: FlowAnswersMap
 }
 
 export type ApplicantInput = {
@@ -41,7 +43,7 @@ export type ApplicantInput = {
 }
 
 const applicantSelectFields =
-  'id, created_at, first_name, last_name, email, phone, dob, country_of_birth, country_of_citizenship, a_number, uscis_online_account_number, passport_number, passport_country, entry_date_us, i94_number, current_status, flow_type'
+  'id, created_at, first_name, last_name, email, phone, dob, country_of_birth, country_of_citizenship, a_number, uscis_online_account_number, passport_number, passport_country, entry_date_us, i94_number, current_status, flow_type, flow_answers'
 
 export function toApplicantInput(applicant: Applicant): ApplicantInput {
   return {
@@ -73,7 +75,7 @@ export async function fetchApplicants(): Promise<Applicant[]> {
     throw new Error(error.message)
   }
 
-  return (data as Applicant[]) ?? []
+  return ((data as Applicant[] | null) ?? []).map(normalizeApplicant)
 }
 
 export async function fetchApplicantById(id: number | string): Promise<Applicant> {
@@ -87,7 +89,7 @@ export async function fetchApplicantById(id: number | string): Promise<Applicant
     throw new Error(error.message)
   }
 
-  return data as Applicant
+  return normalizeApplicant(data as Applicant)
 }
 
 export async function createApplicant(payload: ApplicantInput): Promise<void> {
@@ -111,6 +113,56 @@ export async function updateApplicant(
 
   if (error) {
     throw new Error(error.message)
+  }
+}
+
+export async function fetchApplicantFlowAnswers(
+  id: number | string,
+  flowId: string
+): Promise<InterviewAnswers> {
+  const { data, error } = await supabase
+    .from('applicants')
+    .select('flow_answers')
+    .eq('id', id)
+    .single()
+
+  if (error) {
+    throw new Error(error.message)
+  }
+
+  const flowAnswers = normalizeFlowAnswersMap(data?.flow_answers)
+  return flowAnswers[flowId] ?? {}
+}
+
+export async function saveApplicantFlowAnswers(
+  id: number | string,
+  flowId: string,
+  answers: InterviewAnswers
+): Promise<void> {
+  const { data, error: fetchError } = await supabase
+    .from('applicants')
+    .select('flow_answers')
+    .eq('id', id)
+    .single()
+
+  if (fetchError) {
+    throw new Error(fetchError.message)
+  }
+
+  const currentFlowAnswers = normalizeFlowAnswersMap(data?.flow_answers)
+
+  const { error: updateError } = await supabase
+    .from('applicants')
+    .update({
+      flow_answers: {
+        ...currentFlowAnswers,
+        [flowId]: answers,
+      },
+    })
+    .eq('id', id)
+
+  if (updateError) {
+    throw new Error(updateError.message)
   }
 }
 
@@ -141,4 +193,34 @@ function serializeApplicantPayload(payload: ApplicantInput) {
 function normalizeOptionalValue(value: string): string | null {
   const trimmedValue = value.trim()
   return trimmedValue ? trimmedValue : null
+}
+
+function normalizeApplicant(applicant: Applicant): Applicant {
+  return {
+    ...applicant,
+    flow_answers: normalizeFlowAnswersMap(applicant.flow_answers),
+  }
+}
+
+function normalizeFlowAnswersMap(value: unknown): FlowAnswersMap {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return {}
+  }
+
+  const normalizedValue: FlowAnswersMap = {}
+
+  for (const [flowId, answers] of Object.entries(value)) {
+    if (!answers || typeof answers !== 'object' || Array.isArray(answers)) {
+      continue
+    }
+
+    normalizedValue[flowId] = {}
+
+    for (const [questionId, answer] of Object.entries(answers)) {
+      normalizedValue[flowId][questionId] =
+        typeof answer === 'string' ? answer : String(answer ?? '')
+    }
+  }
+
+  return normalizedValue
 }
