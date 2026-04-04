@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useEffect, useMemo, useState } from 'react'
 
 import {
+  FlowEvaluationResult,
   getVisibleQuestions,
   InterviewAnswers,
   Question,
@@ -13,6 +14,10 @@ import { QuestionRenderer } from './QuestionRenderer'
 type InterviewFlowProps = {
   backHref?: string
   backLabel?: string
+  evaluateAnswers?: (
+    answers: InterviewAnswers,
+    questions: Question[]
+  ) => FlowEvaluationResult
   initialAnswers?: InterviewAnswers
   onSaveAnswers?: (answers: InterviewAnswers) => Promise<void>
   subtitle?: string
@@ -23,6 +28,7 @@ type InterviewFlowProps = {
 export function InterviewFlow({
   backHref = '/',
   backLabel = 'Back to intake',
+  evaluateAnswers,
   initialAnswers = {},
   onSaveAnswers,
   questions,
@@ -62,6 +68,9 @@ export function InterviewFlow({
   const currentQuestion = visibleQuestions[currentIndex]
   const currentAnswer = currentQuestion ? answers[currentQuestion.id] ?? '' : ''
   const isLastQuestion = currentIndex === visibleQuestions.length - 1
+  const evaluationResult = evaluateAnswers
+    ? evaluateAnswers(answers, questions)
+    : null
 
   function handleAnswerChange(value: string) {
     if (!currentQuestion) {
@@ -174,6 +183,7 @@ export function InterviewFlow({
           {showSummary ? (
             <SummaryScreen
               answers={answers}
+              evaluationResult={evaluationResult}
               questions={visibleQuestions}
             />
           ) : currentQuestion ? (
@@ -296,9 +306,11 @@ export function InterviewFlow({
 
 function SummaryScreen({
   answers,
+  evaluationResult,
   questions,
 }: {
   answers: InterviewAnswers
+  evaluationResult: FlowEvaluationResult | null
   questions: Question[]
 }) {
   return (
@@ -312,6 +324,47 @@ function SummaryScreen({
       >
         Summary
       </h2>
+
+      {evaluationResult ? (
+        <section
+          style={{
+            border: '1px solid #cbd5e1',
+            borderRadius: 12,
+            padding: 16,
+            display: 'grid',
+            gap: 12,
+            backgroundColor: '#f8fafc',
+          }}
+        >
+          <div style={{ display: 'grid', gap: 4 }}>
+            <span style={{ color: '#475569', fontSize: '0.9rem' }}>
+              Result status
+            </span>
+            <strong style={{ color: getStatusColor(evaluationResult.status) }}>
+              {evaluationResult.status}
+            </strong>
+          </div>
+
+          <p style={{ margin: 0, color: '#334155' }}>
+            {evaluationResult.explanation}
+          </p>
+
+          <div style={{ display: 'grid', gap: 8 }}>
+            <strong style={{ color: '#0f172a' }}>Missing or risky areas</strong>
+            {evaluationResult.missingOrRiskyAreas.length === 0 ? (
+              <span style={{ color: '#334155' }}>
+                No additional review flags from this rule set.
+              </span>
+            ) : (
+              <ul style={{ margin: 0, paddingLeft: 20, color: '#334155' }}>
+                {evaluationResult.missingOrRiskyAreas.map((item) => (
+                  <li key={item}>{item}</li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </section>
+      ) : null}
 
       <div style={{ display: 'grid', gap: 12 }}>
         {questions.map((question) => (
@@ -368,6 +421,18 @@ const navigationButtonStyles = {
   padding: '12px 16px',
   fontSize: '1rem',
 } as const
+
+function getStatusColor(status: FlowEvaluationResult['status']): string {
+  if (status === 'Likely eligible') {
+    return '#166534'
+  }
+
+  if (status === 'Needs review') {
+    return '#92400e'
+  }
+
+  return '#b91c1c'
+}
 
 function getFirstIncompleteQuestionIndex(
   questions: Question[],

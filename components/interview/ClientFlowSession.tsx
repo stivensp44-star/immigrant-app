@@ -7,11 +7,19 @@ import {
   fetchApplicantFlowAnswers,
   saveApplicantFlowAnswers,
 } from '../../lib/applicantService'
-import { InterviewAnswers, Question } from '../../lib/interview'
+import {
+  FlowEvaluationResult,
+  InterviewAnswers,
+  Question,
+} from '../../lib/interview'
 import { InterviewFlow } from './InterviewFlow'
 
 type ClientFlowSessionProps = {
   applicantId: string
+  evaluateAnswers?: (
+    answers: InterviewAnswers,
+    questions: Question[]
+  ) => FlowEvaluationResult
   flowId: string
   questions: Question[]
   title: string
@@ -19,6 +27,7 @@ type ClientFlowSessionProps = {
 
 export function ClientFlowSession({
   applicantId,
+  evaluateAnswers,
   flowId,
   questions,
   title,
@@ -106,6 +115,7 @@ export function ClientFlowSession({
     <InterviewFlow
       backHref={`/clients/${applicantId}`}
       backLabel="Back to client profile"
+      evaluateAnswers={evaluateAnswers}
       initialAnswers={initialAnswers}
       onSaveAnswers={(answers) =>
         saveApplicantFlowAnswers(applicantId, flowId, answers)
