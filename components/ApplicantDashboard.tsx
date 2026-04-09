@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 
 import { ApplicantForm } from './ApplicantForm'
 import { ApplicantList } from './ApplicantList'
+import { ErrorBoundary } from './ErrorBoundary'
 import { Applicant, fetchApplicants } from '../lib/applicantService'
 
 export function ApplicantDashboard() {
@@ -48,18 +49,21 @@ export function ApplicantDashboard() {
           gap: 24,
         }}
       >
-        <ApplicantForm
-          externalErrorMessage={errorMessage}
-          onApplicantCreated={loadApplicants}
-        />
+        <ErrorBoundary>
+          <ApplicantForm
+            externalErrorMessage={errorMessage}
+            onApplicantCreated={loadApplicants}
+          />
+        </ErrorBoundary>
 
-        <ApplicantList
-          applicants={applicants}
-          isLoadingApplicants={isLoadingApplicants}
-          onRefresh={() => void loadApplicants()}
-        />
+        <ErrorBoundary>
+          <ApplicantList
+            applicants={applicants}
+            isLoadingApplicants={isLoadingApplicants}
+            onRefresh={() => void loadApplicants()}
+          />
+        </ErrorBoundary>
       </div>
     </main>
   )
 }
-
