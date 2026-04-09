@@ -25,6 +25,10 @@ export function AuthForm({ mode }: AuthFormProps) {
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
+    await handleAuth()
+  }
+
+  async function handleAuth() {
     setIsSubmitting(true)
     setErrorMessage('')
     setStatusMessage('')
@@ -109,6 +113,8 @@ export function AuthForm({ mode }: AuthFormProps) {
           </div>
 
           <form
+            action={isSignup ? '/signup' : '/login'}
+            method="post"
             onSubmit={handleSubmit}
             style={{ display: 'grid', gap: 16 }}
           >
@@ -139,7 +145,8 @@ export function AuthForm({ mode }: AuthFormProps) {
             </label>
 
             <button
-              type="submit"
+              type="button"
+              onClick={() => void handleAuth()}
               disabled={isSubmitting}
               style={{
                 border: 0,
