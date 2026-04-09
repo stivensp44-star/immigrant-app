@@ -36,7 +36,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Missing session tokens.' }, { status: 400 })
   }
 
-  const supabase = createServerSupabase(payload.accessToken)
+  const supabase = createServerSupabase()
 
   const { data: sessionData, error: sessionError } = await supabase.auth.setSession(
     {
@@ -55,9 +55,12 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Unable to load user.' }, { status: 401 })
   }
 
-  const { error: vendorError } = await supabase
+  const vendorId = userData.user.id
+  const vendorSupabase = createServerSupabase(sessionData.session.access_token)
+
+  const { error: vendorError } = await vendorSupabase
     .from('vendors')
-    .upsert({ id: userData.user.id })
+    .upsert({ id: vendorId })
 
   if (vendorError) {
     return NextResponse.json(
