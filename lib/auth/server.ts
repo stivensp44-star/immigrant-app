@@ -8,6 +8,7 @@ import { redirect } from 'next/navigation'
 import {
   AUTH_ACCESS_TOKEN_COOKIE,
   AUTH_REFRESH_TOKEN_COOKIE,
+  authCookieOptions,
 } from './session'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
@@ -51,6 +52,18 @@ export async function createAuthenticatedServerSupabase() {
 
   if (error || !data.session) {
     return null
+  }
+
+  if (data.session.access_token !== accessToken) {
+    const cookieStore = await cookies()
+    cookieStore.set(AUTH_ACCESS_TOKEN_COOKIE, data.session.access_token, {
+      ...authCookieOptions,
+      maxAge: data.session.expires_in,
+    })
+    cookieStore.set(AUTH_REFRESH_TOKEN_COOKIE, data.session.refresh_token, {
+      ...authCookieOptions,
+      maxAge: 60 * 60 * 24 * 30,
+    })
   }
 
   return supabase
