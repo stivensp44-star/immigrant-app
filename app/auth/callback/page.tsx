@@ -1,7 +1,7 @@
 'use client'
 
 import { useRouter, useSearchParams } from 'next/navigation'
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 
 import { persistServerSession } from '../../../lib/auth/client'
 import { supabase } from '../../../lib/supabaseClient'
@@ -11,11 +11,7 @@ export default function AuthCallbackPage() {
   const searchParams = useSearchParams()
   const [errorMessage, setErrorMessage] = useState('')
 
-  useEffect(() => {
-    void completeAuth()
-  }, [searchParams])
-
-  async function completeAuth() {
+  const completeAuth = useCallback(async () => {
     const code = searchParams.get('code')
     const tokenHash = searchParams.get('token_hash')
     const type = searchParams.get('type')
@@ -72,7 +68,11 @@ export default function AuthCallbackPage() {
         error instanceof Error ? error.message : 'Unable to complete auth.'
       )
     }
-  }
+  }, [router, searchParams])
+
+  useEffect(() => {
+    void completeAuth()
+  }, [completeAuth])
 
   return (
     <main
@@ -100,4 +100,3 @@ export default function AuthCallbackPage() {
     </main>
   )
 }
-

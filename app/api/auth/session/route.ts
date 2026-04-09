@@ -28,6 +28,18 @@ function createServerSupabase(accessToken?: string) {
 }
 
 export async function POST(request: Request) {
+  const origin = request.headers.get('origin')
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL
+  const isLocalDevOrigin = origin?.startsWith('http://localhost')
+
+  if (
+    origin &&
+    origin !== appUrl &&
+    !(process.env.NODE_ENV === 'development' && isLocalDevOrigin)
+  ) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  }
+
   const payload = (await request.json().catch(() => null)) as
     | { accessToken?: string; refreshToken?: string }
     | null
@@ -60,7 +72,7 @@ export async function POST(request: Request) {
 
   const { error: vendorError } = await vendorSupabase
     .from('vendors')
-    .upsert({ id: vendorId })
+    .upsert({ id: vendorId }, { onConflict: 'id', ignoreDuplicates: true })
 
   if (vendorError) {
     return NextResponse.json(

@@ -123,8 +123,7 @@ export function ApplicantForm({
         />
 
         <button
-          type="button"
-          onClick={() => void submitApplicant()}
+          type="submit"
           disabled={isSubmitting}
           style={{
             border: 0,
