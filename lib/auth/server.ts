@@ -18,12 +18,19 @@ export type VendorSession = {
   userId: string
 }
 
-function createServerSupabase() {
+function createServerSupabase(accessToken?: string) {
   return createClient(supabaseUrl, supabaseAnonKey, {
     auth: {
       autoRefreshToken: false,
       persistSession: false,
     },
+    global: accessToken
+      ? {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        }
+      : undefined,
   })
 }
 
@@ -36,7 +43,7 @@ export async function createAuthenticatedServerSupabase() {
     return null
   }
 
-  const supabase = createServerSupabase()
+  const supabase = createServerSupabase(accessToken)
   const { data, error } = await supabase.auth.setSession({
     access_token: accessToken,
     refresh_token: refreshToken,

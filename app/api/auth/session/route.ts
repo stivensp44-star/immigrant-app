@@ -11,12 +11,19 @@ import {
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 
-function createServerSupabase() {
+function createServerSupabase(accessToken?: string) {
   return createClient(supabaseUrl, supabaseAnonKey, {
     auth: {
       autoRefreshToken: false,
       persistSession: false,
     },
+    global: accessToken
+      ? {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        }
+      : undefined,
   })
 }
 
@@ -29,7 +36,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Missing session tokens.' }, { status: 400 })
   }
 
-  const supabase = createServerSupabase()
+  const supabase = createServerSupabase(payload.accessToken)
 
   const { data: sessionData, error: sessionError } = await supabase.auth.setSession(
     {
@@ -54,7 +61,17 @@ export async function POST(request: Request) {
 
   if (vendorError) {
     return NextResponse.json(
-      { error: 'Unable to ensure vendor record.' },
+      {
+        error: [
+          'Unable to ensure vendor record',
+          vendorError.code ? `code=${vendorError.code}` : null,
+          vendorError.message,
+          vendorError.details || null,
+          vendorError.hint || null,
+        ]
+          .filter(Boolean)
+          .join(' | '),
+      },
       { status: 500 }
     )
   }
@@ -79,4 +96,3 @@ export async function DELETE() {
 
   return NextResponse.json({ ok: true })
 }
-

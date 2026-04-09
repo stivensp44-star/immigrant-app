@@ -34,6 +34,9 @@ export function AuthForm({ mode }: AuthFormProps) {
         ? await supabase.auth.signUp({
             email: email.trim(),
             password,
+            options: {
+              emailRedirectTo: `${window.location.origin}/auth/callback`,
+            },
           })
         : await supabase.auth.signInWithPassword({
             email: email.trim(),
