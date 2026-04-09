@@ -1,6 +1,6 @@
 'use client'
 
-import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 
 import { Applicant } from '../lib/applicantService'
 
@@ -15,6 +15,8 @@ export function ApplicantList({
   isLoadingApplicants,
   onRefresh,
 }: ApplicantListProps) {
+  const router = useRouter()
+
   return (
     <section
       style={{
@@ -69,34 +71,37 @@ export function ApplicantList({
       ) : (
         <div style={{ display: 'grid', gap: 12 }}>
           {applicants.map((applicant) => (
-            <Link
+            <article
               key={applicant.id}
-              href={`/clients/${applicant.id}`}
+              onClick={() => router.push(`/clients/${applicant.id}`)}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                  event.preventDefault()
+                  router.push(`/clients/${applicant.id}`)
+                }
+              }}
+              role="link"
+              tabIndex={0}
               style={{
-                textDecoration: 'none',
+                border: '1px solid #e2e8f0',
+                borderRadius: 12,
+                padding: 16,
+                display: 'grid',
+                gap: 6,
+                backgroundColor: '#ffffff',
+                cursor: 'pointer',
               }}
             >
-              <article
-                style={{
-                  border: '1px solid #e2e8f0',
-                  borderRadius: 12,
-                  padding: 16,
-                  display: 'grid',
-                  gap: 6,
-                  backgroundColor: '#ffffff',
-                }}
-              >
-                <strong style={{ color: '#0f172a' }}>
-                  {[applicant.first_name, applicant.last_name]
-                    .filter(Boolean)
-                    .join(' ')}
-                </strong>
-                <span style={{ color: '#334155' }}>{applicant.email}</span>
-                <span style={{ color: '#0f172a' }}>
-                  Flow: {applicant.flow_type}
-                </span>
-              </article>
-            </Link>
+              <strong style={{ color: '#0f172a' }}>
+                {[applicant.first_name, applicant.last_name]
+                  .filter(Boolean)
+                  .join(' ')}
+              </strong>
+              <span style={{ color: '#334155' }}>{applicant.email}</span>
+              <span style={{ color: '#0f172a' }}>
+                Flow: {applicant.flow_type}
+              </span>
+            </article>
           ))}
         </div>
       )}

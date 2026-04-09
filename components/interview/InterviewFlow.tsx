@@ -1,13 +1,15 @@
 'use client'
 
 import Link from 'next/link'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 
 import {
   FlowEvaluationResult,
+  getMissingRequiredQuestions,
   getVisibleQuestions,
   InterviewAnswers,
   Question,
+  validateQuestionAnswer,
 } from '../../lib/interview'
 import { QuestionRenderer } from './QuestionRenderer'
 
@@ -42,6 +44,9 @@ export function InterviewFlow({
     'idle'
   )
   const [saveError, setSaveError] = useState('')
+  const [validationError, setValidationError] = useState('')
+  const hasHydratedInitialAnswers = useRef(false)
+  const lastSavedAnswersRef = useRef<string>(JSON.stringify(initialAnswers))
 
   const visibleQuestions = useMemo(
     () => getVisibleQuestions(questions, answers),
@@ -51,7 +56,10 @@ export function InterviewFlow({
   useEffect(() => {
     setAnswers(initialAnswers)
     setShowSummary(false)
+    setValidationError('')
     setCurrentIndex(getFirstIncompleteQuestionIndex(questions, initialAnswers))
+    hasHydratedInitialAnswers.current = false
+    lastSavedAnswersRef.current = JSON.stringify(initialAnswers)
   }, [initialAnswers, questions])
 
   useEffect(() => {
@@ -72,6 +80,33 @@ export function InterviewFlow({
     ? evaluateAnswers(answers, questions)
     : null
 
+  useEffect(() => {
+    if (!onSaveAnswers) {
+      return
+    }
+
+    if (!hasHydratedInitialAnswers.current) {
+      hasHydratedInitialAnswers.current = true
+      return
+    }
+
+    const serializedAnswers = JSON.stringify(answers)
+    if (serializedAnswers === lastSavedAnswersRef.current) {
+      return
+    }
+
+    setSaveState('saving')
+    setSaveError('')
+
+    const timeoutId = window.setTimeout(() => {
+      void persistAnswers(answers)
+    }, 800)
+
+    return () => {
+      window.clearTimeout(timeoutId)
+    }
+  }, [answers, onSaveAnswers])
+
   function handleAnswerChange(value: string) {
     if (!currentQuestion) {
       return
@@ -81,6 +116,8 @@ export function InterviewFlow({
       ...currentAnswers,
       [currentQuestion.id]: value,
     }))
+
+    setValidationError(validateQuestionAnswer(currentQuestion, value) ?? '')
 
     if (showSummary) {
       setShowSummary(false)
@@ -103,6 +140,7 @@ export function InterviewFlow({
     }
 
     await persistAnswers(answers)
+    setValidationError('')
     setCurrentIndex((index) => Math.max(index - 1, 0))
   }
 
@@ -111,10 +149,22 @@ export function InterviewFlow({
       return
     }
 
+    const nextValidationError = validateQuestionAnswer(
+      currentQuestion,
+      currentAnswer
+    )
+
+    if (nextValidationError) {
+      setValidationError(nextValidationError)
+      return
+    }
+
     const didPersist = await persistAnswers(answers)
     if (!didPersist) {
       return
     }
+
+    setValidationError('')
 
     if (isLastQuestion) {
       setShowSummary(true)
@@ -207,6 +257,7 @@ export function InterviewFlow({
               <QuestionRenderer
                 answer={currentAnswer}
                 answers={answers}
+                errorMessage={validationError}
                 onChange={handleAnswerChange}
                 question={currentQuestion}
               />
@@ -227,7 +278,7 @@ export function InterviewFlow({
           >
             <button
               type="button"
-              onClick={handleBack}
+              onClick={() => void handleBack()}
               disabled={!showSummary && currentIndex === 0}
               style={{
                 ...navigationButtonStyles,
@@ -244,19 +295,11 @@ export function InterviewFlow({
               <button
                 type="button"
                 onClick={() => void handleNext()}
-                disabled={isCurrentQuestionBlocked(currentQuestion, currentAnswer)}
                 style={{
                   ...navigationButtonStyles,
-                  backgroundColor: isCurrentQuestionBlocked(
-                    currentQuestion,
-                    currentAnswer
-                  )
-                    ? '#94a3b8'
-                    : '#0f172a',
+                  backgroundColor: '#0f172a',
                   color: '#ffffff',
-                  cursor: isCurrentQuestionBlocked(currentQuestion, currentAnswer)
-                    ? 'not-allowed'
-                    : 'pointer',
+                  cursor: 'pointer',
                 }}
               >
                 {isLastQuestion ? 'View summary' : 'Next'}
@@ -292,6 +335,7 @@ export function InterviewFlow({
 
     try {
       await onSaveAnswers(nextAnswers)
+      lastSavedAnswersRef.current = JSON.stringify(nextAnswers)
       setSaveState('saved')
       return true
     } catch (error) {
@@ -313,8 +357,15 @@ function SummaryScreen({
   evaluationResult: FlowEvaluationResult | null
   questions: Question[]
 }) {
+  const completedQuestions = questions.filter((question) => {
+    const answer = answers[question.id] ?? ''
+    return answer.trim() !== '' && !validateQuestionAnswer(question, answer)
+  })
+  const missingRequiredQuestions = getMissingRequiredQuestions(questions, answers)
+  const warningItems = evaluationResult?.warningItems ?? []
+
   return (
-    <div style={{ display: 'grid', gap: 16 }}>
+    <div style={{ display: 'grid', gap: 20 }}>
       <h2
         style={{
           margin: 0,
@@ -322,7 +373,7 @@ function SummaryScreen({
           color: '#0f172a',
         }}
       >
-        Summary
+        Review summary
       </h2>
 
       {evaluationResult ? (
@@ -338,7 +389,7 @@ function SummaryScreen({
         >
           <div style={{ display: 'grid', gap: 4 }}>
             <span style={{ color: '#475569', fontSize: '0.9rem' }}>
-              Result status
+              TPS result status
             </span>
             <strong style={{ color: getStatusColor(evaluationResult.status) }}>
               {evaluationResult.status}
@@ -349,52 +400,58 @@ function SummaryScreen({
             {evaluationResult.explanation}
           </p>
 
+          {evaluationResult.readinessNote ? (
+            <p style={{ margin: 0, color: '#475569' }}>
+              {evaluationResult.readinessNote}
+            </p>
+          ) : null}
+
+          <ReviewSection
+            emptyText="No specific reasons were recorded for this result."
+            items={evaluationResult.reasons.map((reason) => ({
+              label: 'Reason',
+              value: reason,
+            }))}
+            title="Why this result was reached"
+          />
+
           <div style={{ display: 'grid', gap: 8 }}>
-            <strong style={{ color: '#0f172a' }}>Missing or risky areas</strong>
-            {evaluationResult.missingOrRiskyAreas.length === 0 ? (
-              <span style={{ color: '#334155' }}>
-                No additional review flags from this rule set.
-              </span>
-            ) : (
-              <ul style={{ margin: 0, paddingLeft: 20, color: '#334155' }}>
-                {evaluationResult.missingOrRiskyAreas.map((item) => (
-                  <li key={item}>{item}</li>
-                ))}
-              </ul>
-            )}
+            <strong style={{ color: '#0f172a' }}>Recommended next step</strong>
+            <p style={{ margin: 0, color: '#334155' }}>
+              {evaluationResult.recommendedNextStep}
+            </p>
           </div>
         </section>
       ) : null}
 
-      <div style={{ display: 'grid', gap: 12 }}>
-        {questions.map((question) => (
-          <article
-            key={question.id}
-            style={{
-              border: '1px solid #e2e8f0',
-              borderRadius: 12,
-              padding: 16,
-              display: 'grid',
-              gap: 6,
-            }}
-          >
-            <strong style={{ color: '#0f172a' }}>{question.label}</strong>
-            <span style={{ color: '#334155' }}>
-              {formatAnswer(question, answers[question.id] ?? '')}
-            </span>
-          </article>
-        ))}
-      </div>
+      <ReviewSection
+        emptyText="No completed answers yet."
+        items={completedQuestions.map((question) => ({
+          label: question.label,
+          value: formatAnswer(question, answers[question.id] ?? ''),
+        }))}
+        title="Completed answers"
+      />
+
+      <ReviewSection
+        emptyText="No required answers are currently missing."
+        items={missingRequiredQuestions.map((question) => ({
+          label: question.label,
+          value: validateQuestionAnswer(question, answers[question.id] ?? '') ?? '',
+        }))}
+        title="Missing required items"
+      />
+
+      <ReviewSection
+        emptyText="No warning or risk items from this rule set."
+        items={warningItems.map((item) => ({
+          label: 'Review item',
+          value: item,
+        }))}
+        title="Warning or risk items"
+      />
     </div>
   )
-}
-
-function isCurrentQuestionBlocked(question: Question, answer: string): boolean {
-  if (!question.required) {
-    return false
-  }
-
-  return answer.trim() === ''
 }
 
 function formatAnswer(question: Question, answer: string): string {
@@ -439,14 +496,55 @@ function getFirstIncompleteQuestionIndex(
   answers: InterviewAnswers
 ): number {
   const visibleQuestions = getVisibleQuestions(questions, answers)
-  const firstIncompleteIndex = visibleQuestions.findIndex((question) => {
-    if (!question.required) {
-      return false
-    }
-
-    const answer = answers[question.id] ?? ''
-    return answer.trim() === ''
-  })
+  const firstIncompleteIndex = visibleQuestions.findIndex((question) =>
+    Boolean(validateQuestionAnswer(question, answers[question.id] ?? ''))
+  )
 
   return firstIncompleteIndex === -1 ? 0 : firstIncompleteIndex
+}
+
+function ReviewSection({
+  emptyText,
+  items,
+  title,
+}: {
+  emptyText: string
+  items: Array<{ label: string; value: string }>
+  title: string
+}) {
+  return (
+    <section style={{ display: 'grid', gap: 12 }}>
+      <h3
+        style={{
+          margin: 0,
+          fontSize: '1.1rem',
+          color: '#0f172a',
+        }}
+      >
+        {title}
+      </h3>
+
+      {items.length === 0 ? (
+        <p style={{ margin: 0, color: '#64748b' }}>{emptyText}</p>
+      ) : (
+        <div style={{ display: 'grid', gap: 12 }}>
+          {items.map((item) => (
+            <article
+              key={`${title}-${item.label}-${item.value}`}
+              style={{
+                border: '1px solid #e2e8f0',
+                borderRadius: 12,
+                padding: 16,
+                display: 'grid',
+                gap: 6,
+              }}
+            >
+              <strong style={{ color: '#0f172a' }}>{item.label}</strong>
+              <span style={{ color: '#334155' }}>{item.value}</span>
+            </article>
+          ))}
+        </div>
+      )}
+    </section>
+  )
 }

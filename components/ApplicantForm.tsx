@@ -61,6 +61,10 @@ export function ApplicantForm({
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
+    await submitApplicant()
+  }
+
+  async function submitApplicant() {
     setIsSubmitting(true)
     setSuccessMessage('')
     setErrorMessage('')
@@ -119,7 +123,8 @@ export function ApplicantForm({
         />
 
         <button
-          type="submit"
+          type="button"
+          onClick={() => void submitApplicant()}
           disabled={isSubmitting}
           style={{
             border: 0,

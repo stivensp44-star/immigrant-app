@@ -66,9 +66,11 @@ export function toApplicantInput(applicant: Applicant): ApplicantInput {
 }
 
 export async function fetchApplicants(): Promise<Applicant[]> {
+  const vendorId = await getCurrentVendorId()
   const { data, error } = await supabase
     .from('applicants')
     .select(applicantSelectFields)
+    .eq('vendor_id', vendorId)
     .order('created_at', { ascending: false })
 
   if (error) {
@@ -79,10 +81,12 @@ export async function fetchApplicants(): Promise<Applicant[]> {
 }
 
 export async function fetchApplicantById(id: number | string): Promise<Applicant> {
+  const vendorId = await getCurrentVendorId()
   const { data, error } = await supabase
     .from('applicants')
     .select(applicantSelectFields)
     .eq('id', id)
+    .eq('vendor_id', vendorId)
     .single()
 
   if (error) {
@@ -93,9 +97,10 @@ export async function fetchApplicantById(id: number | string): Promise<Applicant
 }
 
 export async function createApplicant(payload: ApplicantInput): Promise<void> {
+  const vendorId = await getCurrentVendorId()
   const { error } = await supabase
     .from('applicants')
-    .insert(serializeApplicantPayload(payload))
+    .insert(serializeApplicantPayload(payload, vendorId))
 
   if (error) {
     throw new Error(error.message)
@@ -106,10 +111,12 @@ export async function updateApplicant(
   id: number | string,
   payload: ApplicantInput
 ): Promise<void> {
+  const vendorId = await getCurrentVendorId()
   const { error } = await supabase
     .from('applicants')
     .update(serializeApplicantPayload(payload))
     .eq('id', id)
+    .eq('vendor_id', vendorId)
 
   if (error) {
     throw new Error(error.message)
@@ -120,10 +127,12 @@ export async function fetchApplicantFlowAnswers(
   id: number | string,
   flowId: string
 ): Promise<InterviewAnswers> {
+  const vendorId = await getCurrentVendorId()
   const { data, error } = await supabase
     .from('applicants')
     .select('flow_answers')
     .eq('id', id)
+    .eq('vendor_id', vendorId)
     .single()
 
   if (error) {
@@ -139,10 +148,12 @@ export async function saveApplicantFlowAnswers(
   flowId: string,
   answers: InterviewAnswers
 ): Promise<void> {
+  const vendorId = await getCurrentVendorId()
   const { data, error: fetchError } = await supabase
     .from('applicants')
     .select('flow_answers')
     .eq('id', id)
+    .eq('vendor_id', vendorId)
     .single()
 
   if (fetchError) {
@@ -160,14 +171,16 @@ export async function saveApplicantFlowAnswers(
       },
     })
     .eq('id', id)
+    .eq('vendor_id', vendorId)
 
   if (updateError) {
     throw new Error(updateError.message)
   }
 }
 
-function serializeApplicantPayload(payload: ApplicantInput) {
+function serializeApplicantPayload(payload: ApplicantInput, vendorId?: string) {
   return {
+    ...(vendorId ? { vendor_id: vendorId } : {}),
     first_name: payload.first_name.trim(),
     last_name: payload.last_name.trim(),
     email: payload.email.trim(),
@@ -188,6 +201,16 @@ function serializeApplicantPayload(payload: ApplicantInput) {
     current_status: normalizeOptionalValue(payload.current_status),
     flow_type: payload.flow_type,
   }
+}
+
+async function getCurrentVendorId(): Promise<string> {
+  const { data, error } = await supabase.auth.getUser()
+
+  if (error || !data.user) {
+    throw new Error('Vendor authentication is required.')
+  }
+
+  return data.user.id
 }
 
 function normalizeOptionalValue(value: string): string | null {

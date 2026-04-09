@@ -5,6 +5,7 @@ import { InterviewAnswers, Question } from '../../lib/interview'
 type QuestionRendererProps = {
   answer: string
   answers: InterviewAnswers
+  errorMessage?: string
   onChange: (value: string) => void
   question: Question
 }
@@ -12,6 +13,7 @@ type QuestionRendererProps = {
 export function QuestionRenderer({
   answer,
   answers,
+  errorMessage,
   onChange,
   question,
 }: QuestionRendererProps) {
@@ -35,7 +37,13 @@ export function QuestionRenderer({
         ) : null}
       </div>
 
-      {renderInput(question, answer, onChange)}
+      {renderInput(question, answer, onChange, errorMessage)}
+
+      {errorMessage ? (
+        <p style={{ margin: 0, color: '#b91c1c', fontSize: '0.95rem' }}>
+          {errorMessage}
+        </p>
+      ) : null}
 
       {question.condition ? (
         <p style={{ margin: 0, color: '#64748b', fontSize: '0.9rem' }}>
@@ -50,7 +58,8 @@ export function QuestionRenderer({
 function renderInput(
   question: Question,
   answer: string,
-  onChange: (value: string) => void
+  onChange: (value: string) => void,
+  errorMessage?: string
 ) {
   if (question.type === 'text') {
     return (
@@ -59,7 +68,7 @@ function renderInput(
         type="text"
         value={answer}
         onChange={(event) => onChange(event.target.value)}
-        style={inputStyles}
+        style={getInputStyles(errorMessage)}
       />
     )
   }
@@ -71,7 +80,7 @@ function renderInput(
         type="date"
         value={answer}
         onChange={(event) => onChange(event.target.value)}
-        style={inputStyles}
+        style={getInputStyles(errorMessage)}
       />
     )
   }
@@ -82,7 +91,7 @@ function renderInput(
         id={question.id}
         value={answer}
         onChange={(event) => onChange(event.target.value)}
-        style={inputStyles}
+        style={getInputStyles(errorMessage)}
       >
         <option value="">Select an option</option>
         {question.options?.map((option) => (
@@ -112,6 +121,7 @@ function renderInput(
             onClick={() => onChange(option.value)}
             style={{
               ...yesNoButtonStyles,
+              borderColor: errorMessage ? '#dc2626' : '#cbd5e1',
               backgroundColor: isSelected ? '#0f172a' : '#ffffff',
               color: isSelected ? '#ffffff' : '#0f172a',
             }}
@@ -133,6 +143,13 @@ const inputStyles = {
   backgroundColor: '#ffffff',
   color: '#0f172a',
 } as const
+
+function getInputStyles(errorMessage?: string) {
+  return {
+    ...inputStyles,
+    borderColor: errorMessage ? '#dc2626' : inputStyles.border.split(' ')[2],
+  }
+}
 
 const yesNoButtonStyles = {
   borderRadius: 10,
