@@ -57,8 +57,8 @@ export default function VerifyEmailPage() {
       })
       return
     }
-    if (token.length !== 6) {
-      setOutcome({ kind: 'error', message: 'Enter the 6-digit code from your email.' })
+    if (token.length !== 8) {
+      setOutcome({ kind: 'error', message: 'Enter the 8-digit code from your email.' })
       return
     }
     setIsSubmitting(true)
@@ -131,7 +131,7 @@ export default function VerifyEmailPage() {
             </h1>
             <p style={{ margin: 0, color: '#475569' }}>
               {hasEmail
-                ? `Enter the 6-digit code we sent to ${email}.`
+                ? `Enter the 8-digit code we sent to ${email}.`
                 : 'No email provided. Please sign up again.'}
             </p>
           </div>
@@ -143,7 +143,7 @@ export default function VerifyEmailPage() {
                 style={{ border: 0, margin: 0, padding: 0, display: 'grid', gap: 16, minInlineSize: 0 }}
               >
                 <label style={{ display: 'grid', gap: 8, color: '#0f172a' }}>
-                  <span>6-digit code</span>
+                  <span>8-digit code</span>
                   <input
                     autoComplete="one-time-code"
                     inputMode="numeric"
@@ -152,22 +152,22 @@ export default function VerifyEmailPage() {
                     type="text"
                     value={token}
                     onChange={handleTokenChange}
-                    maxLength={6}
+                    maxLength={8}
                     style={{ ...inputStyles, letterSpacing: '0.4em', textAlign: 'center', fontSize: '1.25rem' }}
                   />
                 </label>
 
                 <button
                   type="submit"
-                  disabled={disableInputs || token.length !== 6}
+                  disabled={disableInputs || token.length !== 8}
                   style={{
                     border: 0,
                     borderRadius: 10,
-                    backgroundColor: disableInputs || token.length !== 6 ? '#94a3b8' : '#0f172a',
+                    backgroundColor: disableInputs || token.length !== 8 ? '#94a3b8' : '#0f172a',
                     color: '#ffffff',
                     padding: '12px 16px',
                     fontSize: '1rem',
-                    cursor: disableInputs || token.length !== 6 ? 'not-allowed' : 'pointer',
+                    cursor: disableInputs || token.length !== 8 ? 'not-allowed' : 'pointer',
                   }}
                 >
                   {!isHydrated ? 'Loading...' : isSubmitting ? 'Verifying...' : 'Verify'}
