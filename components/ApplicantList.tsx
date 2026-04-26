@@ -98,9 +98,6 @@ export function ApplicantList({
                   .join(' ')}
               </strong>
               <span style={{ color: '#334155' }}>{applicant.email}</span>
-              <span style={{ color: '#0f172a' }}>
-                Flow: {applicant.flow_type}
-              </span>
             </article>
           ))}
         </div>

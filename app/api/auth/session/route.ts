@@ -91,15 +91,21 @@ export async function POST(request: Request) {
     )
   }
 
-  const cookieStore = await cookies()
-  cookieStore.set(AUTH_ACCESS_TOKEN_COOKIE, sessionData.session.access_token, {
-    ...authCookieOptions,
-    maxAge: sessionData.session.expires_in,
-  })
-  cookieStore.set(AUTH_REFRESH_TOKEN_COOKIE, sessionData.session.refresh_token, {
-    ...authCookieOptions,
-    maxAge: 60 * 60 * 24 * 30,
-  })
+  if (sessionData.session.access_token !== payload.accessToken) {
+    const cookieStore = await cookies()
+    cookieStore.set(AUTH_ACCESS_TOKEN_COOKIE, sessionData.session.access_token, {
+      ...authCookieOptions,
+      maxAge: sessionData.session.expires_in,
+    })
+    cookieStore.set(
+      AUTH_REFRESH_TOKEN_COOKIE,
+      sessionData.session.refresh_token,
+      {
+        ...authCookieOptions,
+        maxAge: 60 * 60 * 24 * 30,
+      }
+    )
+  }
 
   return NextResponse.json({ ok: true })
 }

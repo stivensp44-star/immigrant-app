@@ -20,21 +20,6 @@ export type Question = {
 }
 
 export type InterviewAnswers = Record<string, string>
-export type FlowAnswersMap = Record<string, InterviewAnswers>
-export type FlowResultStatus =
-  | 'Likely eligible'
-  | 'Needs review'
-  | 'Potential issue identified'
-
-export type FlowEvaluationResult = {
-  explanation: string
-  missingRequiredItems: string[]
-  readinessNote?: string
-  reasons: string[]
-  recommendedNextStep: string
-  status: FlowResultStatus
-  warningItems: string[]
-}
 
 export function isQuestionVisible(
   question: Question,

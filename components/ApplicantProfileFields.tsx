@@ -13,6 +13,23 @@ export function ApplicantProfileFields({
   formValues,
   onChange,
 }: ApplicantProfileFieldsProps) {
+  const singleCitizenship = formValues.countries_of_citizenship[0] ?? ''
+
+  function handleCitizenshipChange(
+    event: ChangeEvent<HTMLInputElement>
+  ) {
+    const trimmed = event.target.value
+    const syntheticEvent = {
+      ...event,
+      target: {
+        ...event.target,
+        name: 'countries_of_citizenship',
+        value: trimmed ? [trimmed] : [],
+      },
+    } as unknown as ChangeEvent<HTMLInputElement>
+    onChange(syntheticEvent)
+  }
+
   return (
     <>
       <div
@@ -62,9 +79,9 @@ export function ApplicantProfileFields({
       <label style={{ display: 'grid', gap: 8, color: '#0f172a' }}>
         <span>Phone</span>
         <input
-          name="phone"
+          name="daytime_phone"
           type="tel"
-          value={formValues.phone}
+          value={formValues.daytime_phone}
           onChange={onChange}
           style={inputStyles}
         />
@@ -80,9 +97,9 @@ export function ApplicantProfileFields({
         <label style={{ display: 'grid', gap: 8, color: '#0f172a' }}>
           <span>Date of birth</span>
           <input
-            name="dob"
+            name="date_of_birth"
             type="date"
-            value={formValues.dob}
+            value={formValues.date_of_birth}
             onChange={onChange}
             style={inputStyles}
           />
@@ -91,9 +108,9 @@ export function ApplicantProfileFields({
         <label style={{ display: 'grid', gap: 8, color: '#0f172a' }}>
           <span>Entry date to U.S.</span>
           <input
-            name="entry_date_us"
+            name="last_entry_date"
             type="date"
-            value={formValues.entry_date_us}
+            value={formValues.last_entry_date}
             onChange={onChange}
             style={inputStyles}
           />
@@ -121,10 +138,10 @@ export function ApplicantProfileFields({
         <label style={{ display: 'grid', gap: 8, color: '#0f172a' }}>
           <span>Country of citizenship</span>
           <input
-            name="country_of_citizenship"
+            name="countries_of_citizenship_single"
             type="text"
-            value={formValues.country_of_citizenship}
-            onChange={onChange}
+            value={singleCitizenship}
+            onChange={handleCitizenshipChange}
             style={inputStyles}
           />
         </label>
@@ -181,9 +198,9 @@ export function ApplicantProfileFields({
         <label style={{ display: 'grid', gap: 8, color: '#0f172a' }}>
           <span>Passport country</span>
           <input
-            name="passport_country"
+            name="passport_country_of_issuance"
             type="text"
-            value={formValues.passport_country}
+            value={formValues.passport_country_of_issuance}
             onChange={onChange}
             style={inputStyles}
           />
@@ -211,28 +228,14 @@ export function ApplicantProfileFields({
         <label style={{ display: 'grid', gap: 8, color: '#0f172a' }}>
           <span>Current status</span>
           <input
-            name="current_status"
+            name="current_immigration_status"
             type="text"
-            value={formValues.current_status}
+            value={formValues.current_immigration_status}
             onChange={onChange}
             style={inputStyles}
           />
         </label>
       </div>
-
-      <label style={{ display: 'grid', gap: 8, color: '#0f172a' }}>
-        <span>Flow type</span>
-        <select
-          name="flow_type"
-          value={formValues.flow_type}
-          onChange={onChange}
-          style={inputStyles}
-        >
-          <option value="TPS">TPS</option>
-          <option value="TPS_EAD">TPS_EAD</option>
-          <option value="ASYLUM_EAD">ASYLUM_EAD</option>
-        </select>
-      </label>
     </>
   )
 }

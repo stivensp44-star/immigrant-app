@@ -1,36 +1,31 @@
 'use client'
-
 import { ChangeEvent, FormEvent, useState } from 'react'
-
 import {
   ApplicantInput,
   createApplicant,
 } from '../lib/applicantService'
 import { ApplicantProfileFields } from './ApplicantProfileFields'
-
 type ApplicantFormProps = {
   externalErrorMessage?: string
   onApplicantCreated: () => Promise<void>
 }
-
 const initialFormValues: ApplicantInput = {
   first_name: '',
   last_name: '',
   email: '',
-  phone: '',
-  dob: '',
+  daytime_phone: '',
+  mobile_phone: '',
+  date_of_birth: '',
   country_of_birth: '',
-  country_of_citizenship: '',
+  countries_of_citizenship: [],
   a_number: '',
   uscis_online_account_number: '',
   passport_number: '',
-  passport_country: '',
-  entry_date_us: '',
+  passport_country_of_issuance: '',
+  last_entry_date: '',
   i94_number: '',
-  current_status: '',
-  flow_type: 'TPS',
+  current_immigration_status: '',
 }
-
 export function ApplicantForm({
   externalErrorMessage = '',
   onApplicantCreated,
@@ -39,36 +34,29 @@ export function ApplicantForm({
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [successMessage, setSuccessMessage] = useState('')
   const [errorMessage, setErrorMessage] = useState('')
-
   function handleChange(
     event: ChangeEvent<HTMLInputElement | HTMLSelectElement>
   ) {
     const { name, value } = event.target
-
     setFormValues((currentValues) => ({
       ...currentValues,
       [name]: value,
     }))
-
     if (successMessage) {
       setSuccessMessage('')
     }
-
     if (errorMessage) {
       setErrorMessage('')
     }
   }
-
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     await submitApplicant()
   }
-
   async function submitApplicant() {
     setIsSubmitting(true)
     setSuccessMessage('')
     setErrorMessage('')
-
     try {
       await createApplicant(formValues)
       setFormValues(initialFormValues)
@@ -82,7 +70,6 @@ export function ApplicantForm({
       setIsSubmitting(false)
     }
   }
-
   return (
     <section
       style={{
@@ -112,7 +99,6 @@ export function ApplicantForm({
           Capture a new intake and review recent applicants below.
         </p>
       </div>
-
       <form
         onSubmit={handleSubmit}
         style={{ display: 'grid', gap: 16 }}
@@ -121,7 +107,6 @@ export function ApplicantForm({
           formValues={formValues}
           onChange={handleChange}
         />
-
         <button
           type="submit"
           disabled={isSubmitting}
@@ -138,13 +123,11 @@ export function ApplicantForm({
           {isSubmitting ? 'Saving...' : 'Save applicant'}
         </button>
       </form>
-
       {successMessage ? (
         <p style={{ margin: '16px 0 0', color: '#166534' }}>
           {successMessage}
         </p>
       ) : null}
-
       {errorMessage || externalErrorMessage ? (
         <p style={{ margin: '16px 0 0', color: '#b91c1c' }}>
           {errorMessage || externalErrorMessage}
