@@ -84,15 +84,18 @@ export function AuthForm({ mode }: AuthFormProps) {
     )
     if (error) throw error
     if (!data.session) throw new Error('Login succeeded without a session. Please try again.')
+    if (!data.user?.email_confirmed_at) {
+      router.replace(`/auth/verify-email?email=${encodeURIComponent(email)}`)
+      return
+    }
     await persistServerSession(data.session.access_token, data.session.refresh_token)
     router.replace('/')
     router.refresh()
   }
 
   async function handleSignup(email: string, password: string) {
-    const emailRedirectTo = new URL('/auth/callback', window.location.origin).toString()
     const { data, error } = await withTimeout(
-      supabase.auth.signUp({ email, password, options: { emailRedirectTo } }),
+      supabase.auth.signUp({ email, password }),
       15000,
       'Signup request timed out.'
     )
@@ -104,12 +107,7 @@ export function AuthForm({ mode }: AuthFormProps) {
       return
     }
     if (!data.user) throw new Error('Signup did not complete.')
-    setFormValues((c) => ({ ...c, confirmPassword: '', password: '' }))
-    setOutcome({
-      kind: 'success',
-      email,
-      message: 'Account created. Check your email for the confirmation link before logging in.',
-    })
+    router.replace(`/auth/verify-email?email=${encodeURIComponent(email)}`)
   }
 
   return (
