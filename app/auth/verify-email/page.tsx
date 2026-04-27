@@ -42,7 +42,7 @@ export default function VerifyEmailPage() {
   }, [resendCooldown])
 
   function handleTokenChange(event: ChangeEvent<HTMLInputElement>) {
-    const cleaned = event.target.value.replace(/\D/g, '').slice(0, 6)
+    const cleaned = event.target.value.replace(/\D/g, '').slice(0, 8)
     setToken(cleaned)
     if (outcome.kind !== 'idle') setOutcome({ kind: 'idle' })
   }
