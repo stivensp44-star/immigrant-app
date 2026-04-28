@@ -91,7 +91,7 @@ export async function POST(request: Request) {
     )
   }
 
-  if (sessionData.session.access_token !== payload.accessToken) {
+  
     const cookieStore = await cookies()
     cookieStore.set(AUTH_ACCESS_TOKEN_COOKIE, sessionData.session.access_token, {
       ...authCookieOptions,
@@ -105,7 +105,7 @@ export async function POST(request: Request) {
         maxAge: 60 * 60 * 24 * 30,
       }
     )
-  }
+  
 
   return NextResponse.json({ ok: true })
 }
