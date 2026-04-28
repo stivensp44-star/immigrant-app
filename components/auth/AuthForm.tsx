@@ -178,6 +178,14 @@ export function AuthForm({ mode }: AuthFormProps) {
             <p style={{ margin: 0, color: '#b91c1c' }}>{outcome.message}</p>
           ) : null}
 
+         {!isSignup ? (
+            <p style={{ margin: 0, color: '#475569' }}>
+              <Link href="/auth/forgot-password" style={{ color: '#0f172a' }}>
+                Forgot your password?
+              </Link>
+            </p>
+          ) : null}
+
           <p style={{ margin: 0, color: '#475569' }}>
             {isSignup ? 'Already have an account?' : 'Need an account?'}{' '}
             <Link href={isSignup ? '/login' : '/signup'} style={{ color: '#0f172a' }}>
